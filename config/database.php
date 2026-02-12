@@ -16,12 +16,14 @@
  */
 
 // Read Railway environment variables; fall back to local defaults
-// Priority: $_ENV > getenv() > Local Defaults
-$dbHost = $_ENV['MYSQLHOST']     ?? getenv('MYSQLHOST')     ?: 'localhost';
-$dbUser = $_ENV['MYSQLUSER']     ?? getenv('MYSQLUSER')     ?: 'root';
-$dbPass = $_ENV['MYSQLPASSWORD'] ?? getenv('MYSQLPASSWORD') ?: '';
-$dbName = $_ENV['MYSQLDATABASE'] ?? getenv('MYSQLDATABASE') ?: 'car_rental_system';
-$dbPort = $_ENV['MYSQLPORT']     ?? getenv('MYSQLPORT')     ?: 3307;
+// Priority: $_ENV > $_SERVER > getenv() > Local Defaults
+// We check both 'MYSQL...' and 'MYSQL_...' formats to be safe.
+
+$dbHost = $_ENV['MYSQLHOST']     ?? $_ENV['MYSQL_HOST']     ?? $_SERVER['MYSQLHOST']     ?? $_SERVER['MYSQL_HOST']     ?? getenv('MYSQLHOST')     ?? getenv('MYSQL_HOST')     ?? 'localhost';
+$dbUser = $_ENV['MYSQLUSER']     ?? $_ENV['MYSQL_USER']     ?? $_SERVER['MYSQLUSER']     ?? $_SERVER['MYSQL_USER']     ?? getenv('MYSQLUSER')     ?? getenv('MYSQL_USER')     ?? 'root';
+$dbPass = $_ENV['MYSQLPASSWORD'] ?? $_ENV['MYSQL_PASSWORD'] ?? $_SERVER['MYSQLPASSWORD'] ?? $_SERVER['MYSQL_PASSWORD'] ?? getenv('MYSQLPASSWORD') ?? getenv('MYSQL_PASSWORD') ?? '';
+$dbName = $_ENV['MYSQLDATABASE'] ?? $_ENV['MYSQL_DATABASE'] ?? $_SERVER['MYSQLDATABASE'] ?? $_SERVER['MYSQL_DATABASE'] ?? getenv('MYSQLDATABASE') ?? getenv('MYSQL_DATABASE') ?? 'car_rental_system';
+$dbPort = $_ENV['MYSQLPORT']     ?? $_ENV['MYSQL_PORT']     ?? $_SERVER['MYSQLPORT']     ?? $_SERVER['MYSQL_PORT']     ?? getenv('MYSQLPORT')     ?? getenv('MYSQL_PORT')     ?? 3307;
 
 define('DB_HOST', $dbHost);
 define('DB_USER', $dbUser);
