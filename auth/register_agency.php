@@ -67,7 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'An account with this email already exists.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Agency registration check error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 
@@ -88,7 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Registration failed. Please try again.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Agency registration insert error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 }

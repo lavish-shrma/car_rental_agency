@@ -43,7 +43,8 @@ try {
     $stmt->execute([$agencyId]);
     $bookings = $stmt->fetchAll();
 } catch (PDOException $e) {
-    die("Error fetching bookings: " . $e->getMessage());
+    error_log("Error fetching bookings: " . $e->getMessage());
+    die("Something went wrong. Please try again later.");
 }
 
 require_once __DIR__ . '/../includes/header.php';

@@ -1,13 +1,19 @@
 <?php
 /**
  * Database Configuration - TEMPLATE
- * Copy this file to database.php to use.
+ * 
+ * SETUP: Copy this file to database.php
+ * 
  * See database.php for full documentation.
+ * Railway variables: MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT
  */
+
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 
 $dbUrl = getenv('MYSQL_URL') ?: getenv('DATABASE_URL') ?: '';
 $urlParts = [];
-
 if (!empty($dbUrl)) {
     $parsed = parse_url($dbUrl);
     if ($parsed) {
@@ -26,7 +32,8 @@ $dbName = ($urlParts['name'] ?? '') ?: (getenv('MYSQLDATABASE') ?: '') ?: (geten
 $dbPort = ($urlParts['port'] ?? '') ?: (getenv('MYSQLPORT') ?: '') ?: (getenv('MYSQL_PORT') ?: '') ?: 3306;
 
 if (empty($dbName)) {
-    $dbName = (strpos($dbHost, 'railway') !== false) ? 'railway' : 'car_rental_system';
+    error_log('FATAL: MYSQLDATABASE environment variable is not set.');
+    die('Service temporarily unavailable. Please try again in a few moments.');
 }
 
 define('DB_HOST', $dbHost);
@@ -45,5 +52,6 @@ try {
     $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
     $conn = $pdo;
 } catch (PDOException $e) {
-    die('Database connection failed: ' . $e->getMessage());
+    error_log('Database connection failed: ' . $e->getMessage());
+    die('Service temporarily unavailable. Please try again in a few moments.');
 }

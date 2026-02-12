@@ -65,7 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'This vehicle number is already registered.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Add car check error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 
@@ -89,7 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Failed to add car. Please try again.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Add car insert error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 }
@@ -100,7 +102,8 @@ try {
     $stmt->execute([$agencyId]);
     $cars = $stmt->fetchAll();
 } catch (PDOException $e) {
-    die("Error fetching cars: " . $e->getMessage());
+    error_log('Error fetching agency cars: ' . $e->getMessage());
+    die('Something went wrong. Please try again later.');
 }
 
 require_once __DIR__ . '/../includes/header.php';

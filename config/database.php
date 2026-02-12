@@ -1,15 +1,26 @@
 <?php
 /**
- * Database Configuration - FINAL ROBUST FIX
+ * Database Configuration
  * 
- * Priority:
- * 1. MYSQL_URL / DATABASE_URL (full connection string)
- * 2. Individual Railway variables (MYSQLHOST, MYSQLDATABASE, etc.)
- * 3. Smart fallback: if host contains "railway", database = "railway"
- * 4. Local fallback: localhost defaults for XAMPP
+ * PRODUCTION NOTE:
+ * This app runs inside a container SEPARATE from the MySQL container.
+ * Using "localhost" will NOT work in production — environment variables are required.
+ * Railway injects: MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT
  *
- * IMPORTANT: Uses ?: (not ??) so empty strings are treated as missing.
+ * Priority order:
+ * 1. MYSQL_URL / DATABASE_URL (full connection string, if Railway provides it)
+ * 2. Individual Railway env vars (MYSQLHOST, MYSQLDATABASE, etc.)
+ * 3. Local development fallback (localhost/root — only works on your own machine)
+ *
+ * SECURITY: Production sites must not expose internal paths, SQL queries,
+ * hostnames, or credentials to visitors. Errors are logged, not displayed.
  */
+
+// ── Disable error display in production ───────────────────────────────────────
+// Prevents PHP from printing internal errors, paths, or queries to visitors.
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 
 // ── Step 1: Try MYSQL_URL / DATABASE_URL ──────────────────────────────────────
 $dbUrl = getenv('MYSQL_URL') ?: getenv('DATABASE_URL') ?: '';
@@ -27,22 +38,22 @@ if (!empty($dbUrl)) {
 }
 
 // ── Step 2: Resolve each value ────────────────────────────────────────────────
-// Using ?: (not ??) so empty strings fall through to the next option.
+// Uses ?: (not ??) so empty strings fall through to the next option.
 
 $dbHost = ($urlParts['host'] ?? '')
     ?: (getenv('MYSQLHOST') ?: '')
     ?: (getenv('MYSQL_HOST') ?: '')
-    ?: 'localhost';
+    ?: 'localhost';  // Local fallback only — will not work in production
 
 $dbUser = ($urlParts['user'] ?? '')
     ?: (getenv('MYSQLUSER') ?: '')
     ?: (getenv('MYSQL_USER') ?: '')
-    ?: 'root';
+    ?: 'root';  // Local fallback only
 
 $dbPass = ($urlParts['pass'] ?? '')
     ?: (getenv('MYSQLPASSWORD') ?: '')
     ?: (getenv('MYSQL_PASSWORD') ?: '')
-    ?: '';
+    ?: '';  // Local fallback only
 
 $dbName = ($urlParts['name'] ?? '')
     ?: (getenv('MYSQLDATABASE') ?: '')
@@ -54,15 +65,12 @@ $dbPort = ($urlParts['port'] ?? '')
     ?: (getenv('MYSQL_PORT') ?: '')
     ?: 3306;
 
-// ── Step 3: Smart fallback for database name ──────────────────────────────────
-// If we're on Railway (host contains "railway") but dbName is still empty,
-// Railway's default database is always called "railway".
+// ── Step 3: Fail safely if database name is missing ───────────────────────────
+// Do NOT guess the database name. If credentials are missing, stop immediately.
 if (empty($dbName)) {
-    if (strpos($dbHost, 'railway') !== false) {
-        $dbName = 'railway';
-    } else {
-        $dbName = 'car_rental_system'; // Local XAMPP default
-    }
+    // Log the real error for the developer
+    error_log('FATAL: MYSQLDATABASE environment variable is not set. Cannot connect.');
+    die('Service temporarily unavailable. Please try again in a few moments.');
 }
 
 // ── Step 4: Define constants ──────────────────────────────────────────────────
@@ -72,8 +80,10 @@ define('DB_PASS', $dbPass);
 define('DB_NAME', $dbName);
 define('DB_PORT', (int) $dbPort);
 
-// ── Step 5: Connect ───────────────────────────────────────────────────────────
+// ── Step 5: Connect via PDO ───────────────────────────────────────────────────
 try {
+    // utf8mb4 prevents encoding issues; ERRMODE_EXCEPTION catches errors properly;
+    // EMULATE_PREPARES=false reduces SQL injection edge cases.
     $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4";
     
     $options = [
@@ -86,13 +96,7 @@ try {
     $conn = $pdo;
 
 } catch (PDOException $e) {
-    $safeMsg = str_replace([DB_PASS, DB_USER], ['***', '***'], $e->getMessage());
-    die('<div style="color:red; font-family:sans-serif; padding:20px; border:1px solid red; background:#fff3f3;">
-        <h2>Database Connection Failed</h2>
-        <p><strong>Error:</strong> ' . htmlspecialchars($safeMsg) . '</p>
-        <p><strong>Debug:</strong><br>
-        Host: ' . htmlspecialchars(DB_HOST) . '<br>
-        Port: ' . DB_PORT . '<br>
-        Database: ' . htmlspecialchars(DB_NAME) . ' (len=' . strlen(DB_NAME) . ')</p>
-    </div>');
+    // Log the real error internally — never show it to visitors
+    error_log('Database connection failed: ' . $e->getMessage());
+    die('Service temporarily unavailable. Please try again in a few moments.');
 }

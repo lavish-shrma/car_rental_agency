@@ -70,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Invalid email, password, or user type selection.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Login error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 }

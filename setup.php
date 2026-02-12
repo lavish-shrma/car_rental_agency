@@ -119,6 +119,7 @@ try {
     echo "</ul>";
 
 } catch (PDOException $e) {
+    error_log('Setup error: ' . $e->getMessage());
     echo "<p class='err'>❌ Error: " . htmlspecialchars($e->getMessage()) . "</p>";
     echo "<p>Please check your Railway database configuration.</p>";
 }

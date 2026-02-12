@@ -40,7 +40,8 @@ try {
         exit;
     }
 } catch (PDOException $e) {
-    die("Database error: " . $e->getMessage());
+    error_log('Edit car fetch error: ' . $e->getMessage());
+    die('Something went wrong. Please try again later.');
 }
 
 // Pre-populate form fields
@@ -83,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'This vehicle number is already registered to another car.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Edit car check error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 
@@ -103,7 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Failed to update car. Please try again.';
             }
         } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
+            error_log('Edit car update error: ' . $e->getMessage());
+            $errors[] = 'Something went wrong. Please try again.';
         }
     }
 }

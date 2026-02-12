@@ -32,7 +32,8 @@ try {
     $stmt = $pdo->query($query);
     $cars = $stmt->fetchAll();
 } catch (PDOException $e) {
-    die("Error fetching cars: " . $e->getMessage());
+    error_log("Error fetching cars: " . $e->getMessage());
+    die("Something went wrong. Please try again later.");
 }
 
 require_once __DIR__ . '/../includes/header.php';

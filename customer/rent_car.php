@@ -78,7 +78,8 @@ if (empty($errors)) {
             $rentPerDay = (float)$carData['rent_per_day'];
         }
     } catch (PDOException $e) {
-        $errors[] = 'Database error: ' . $e->getMessage();
+        error_log('Rent car lookup error: ' . $e->getMessage());
+        $errors[] = 'Something went wrong. Please try again.';
     }
 }
 
@@ -132,7 +133,8 @@ try {
     }
     $pageTitle = 'Booking Error';
     require_once __DIR__ . '/../includes/header.php';
-    echo '<div class="alert alert-danger">Failed to create booking: ' . escape($e->getMessage()) . '</div>';
+    error_log('Booking creation error: ' . $e->getMessage());
+    echo '<div class="alert alert-danger">Failed to create booking. Please try again.</div>';
     echo '<a href="/customer/available_cars.php" class="btn btn-primary">Back to Available Cars</a>';
     require_once __DIR__ . '/../includes/footer.php';
     exit;
