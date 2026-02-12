@@ -56,7 +56,7 @@ $dbName = ltrim($rawDbName, '/'); // Remove leading slash if from URL
 $dbPort = $urlConfig['port'] 
     ?? $_ENV['MYSQLPORT'] ?? $_ENV['MYSQL_PORT'] 
     ?? getenv('MYSQLPORT') ?? getenv('MYSQL_PORT') 
-    ?? 3307;
+    ?? 3306;
 
 // 3. Define Constants
 define('DB_HOST', $dbHost);

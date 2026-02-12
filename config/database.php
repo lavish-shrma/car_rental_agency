@@ -54,7 +54,7 @@ $dbName = ltrim($rawDbName, '/'); // Remove leading slash if from URL
 $dbPort = $urlConfig['port'] 
     ?? $_ENV['MYSQLPORT'] ?? $_ENV['MYSQL_PORT'] 
     ?? getenv('MYSQLPORT') ?? getenv('MYSQL_PORT') 
-    ?? 3307;
+    ?? 3306;
 
 // 3. Define Constants
 define('DB_HOST', $dbHost);
@@ -82,9 +82,8 @@ try {
     $conn = $pdo; // For backward compatibility
 
 } catch (PDOException $e) {
-    // Hide password in error message
     $safeMessage = str_replace([DB_PASS, DB_USER], ['***', '***'], $e->getMessage());
-    die('<div style="color:red; font-family:sans-serif; padding:20px; border:1px solid red; background:#xffe;">
+    die('<div style="color:red; font-family:sans-serif; padding:20px; border:1px solid red; background:#fff3f3;">
         <h2>Database Connection Failed</h2>
         <p><strong>Error:</strong> ' . htmlspecialchars($safeMessage) . '</p>
         <p><strong>Debug Info:</strong><br>
