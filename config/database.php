@@ -16,15 +16,22 @@
  */
 
 // Read Railway environment variables; fall back to local defaults
-define('DB_HOST', getenv('MYSQLHOST')     ?: 'localhost');
-define('DB_USER', getenv('MYSQLUSER')     ?: 'root');
-define('DB_PASS', getenv('MYSQLPASSWORD') ?: '');
-define('DB_NAME', getenv('MYSQLDATABASE') ?: 'car_rental_system');
-$dbPort =         getenv('MYSQLPORT')     ?: 3307;  // Change 3307 to 3306 if your local MySQL uses the default port
+// Priority: $_ENV > getenv() > Local Defaults
+$dbHost = $_ENV['MYSQLHOST']     ?? getenv('MYSQLHOST')     ?: 'localhost';
+$dbUser = $_ENV['MYSQLUSER']     ?? getenv('MYSQLUSER')     ?: 'root';
+$dbPass = $_ENV['MYSQLPASSWORD'] ?? getenv('MYSQLPASSWORD') ?: '';
+$dbName = $_ENV['MYSQLDATABASE'] ?? getenv('MYSQLDATABASE') ?: 'car_rental_system';
+$dbPort = $_ENV['MYSQLPORT']     ?? getenv('MYSQLPORT')     ?: 3307;
+
+define('DB_HOST', $dbHost);
+define('DB_USER', $dbUser);
+define('DB_PASS', $dbPass);
+define('DB_NAME', $dbName);
+define('DB_PORT', $dbPort);
 
 try {
     // Create PDO connection
-    $dsn = "mysql:host=" . DB_HOST . ";port=$dbPort;dbname=" . DB_NAME . ";charset=utf8mb4";
+    $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4";
     
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Throw exceptions on errors
