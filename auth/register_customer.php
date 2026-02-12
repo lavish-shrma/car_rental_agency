@@ -1,0 +1,156 @@
+<?php
+/**
+ * Customer Registration Page
+ *
+ * Allows new customers to create an account.
+ * Validates input on both client and server side.
+ */
+$pageTitle = 'Customer Registration';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+
+$errors = [];
+$successMessage = '';
+
+// Form field values (to repopulate on error)
+$fullName    = '';
+$email       = '';
+$phoneNumber = '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Collect and trim input
+    $fullName        = trim($_POST['full_name'] ?? '');
+    $email           = trim($_POST['email'] ?? '');
+    $phoneNumber     = trim($_POST['phone_number'] ?? '');
+    $password        = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    // --- Server-side Validation ---
+
+    if ($fullName === '') {
+        $errors[] = 'Full name is required.';
+    }
+
+    if ($email === '') {
+        $errors[] = 'Email is required.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Please enter a valid email address.';
+    }
+
+    if ($phoneNumber === '') {
+        $errors[] = 'Phone number is required.';
+    }
+
+    if ($password === '') {
+        $errors[] = 'Password is required.';
+    } elseif (strlen($password) < 8) {
+        $errors[] = 'Password must be at least 8 characters.';
+    }
+
+    if ($confirmPassword === '') {
+        $errors[] = 'Please confirm your password.';
+    } elseif ($password !== $confirmPassword) {
+        $errors[] = 'Passwords do not match.';
+    }
+
+    // Check duplicate email
+    if (empty($errors)) {
+        $stmt = $conn->prepare('SELECT id FROM users WHERE email = ?');
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $stmt->store_result();
+        if ($stmt->num_rows > 0) {
+            $errors[] = 'An account with this email already exists.';
+        }
+        $stmt->close();
+    }
+
+    // Insert into database
+    if (empty($errors)) {
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $userType = 'customer';
+
+        $stmt = $conn->prepare(
+            'INSERT INTO users (user_type, email, password, full_name, phone_number) VALUES (?, ?, ?, ?, ?)'
+        );
+        $stmt->bind_param('sssss', $userType, $email, $hashedPassword, $fullName, $phoneNumber);
+
+        if ($stmt->execute()) {
+            $stmt->close();
+            // Redirect to login with success indicator
+            header('Location: /auth/login.php?registered=1');
+            exit;
+        } else {
+            $errors[] = 'Registration failed. Please try again.';
+        }
+        $stmt->close();
+    }
+}
+
+require_once __DIR__ . '/../includes/header.php';
+?>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="form-wrapper">
+            <h2 class="page-heading text-center">Customer Registration</h2>
+
+            <!-- Error Messages -->
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?php echo escape($error); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <!-- Registration Form -->
+            <form method="POST" action="" onsubmit="return validateRegistrationForm(this, false);">
+                <div class="mb-3">
+                    <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="full_name" name="full_name"
+                           value="<?php echo escape($fullName); ?>" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" id="email" name="email"
+                           value="<?php echo escape($email); ?>" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="phone_number" name="phone_number"
+                           value="<?php echo escape($phoneNumber); ?>" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control" id="password" name="password"
+                           minlength="8" required>
+                    <div class="form-text">Minimum 8 characters.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="confirm_password" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                           minlength="8" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Register</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Already have an account? <a href="/auth/login.php">Login here</a>
+            </p>
+            <p class="text-center">
+                Register as Agency? <a href="/auth/register_agency.php">Click here</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>
