@@ -1,6 +1,6 @@
 # Force PHP provider and specific version
 [phases.setup]
-nixPkgs = ["php81", "php81Extensions.mysqli", "php81Extensions.mysqlnd", "bash"]
+nixPkgs = ["php81", "php81Extensions.mysqli", "php81Extensions.mysqlnd", "php81Extensions.pdo_mysql", "bash"]
 
 # Clear build commands to prevent "npm" errors
 [phases.build]
