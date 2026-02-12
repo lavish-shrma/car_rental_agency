@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["php81", "php81Extensions.mysqli", "php81Extensions.mysqlnd"]
+
+[phases.build]
+cmds = ["echo 'Building PHP app with MySQLi support...'"]
+
+[start]
+cmd = "php -S 0.0.0.0:$PORT"
