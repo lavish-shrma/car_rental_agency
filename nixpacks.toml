@@ -1,8 +1,11 @@
+# Force PHP provider and specific version
 [phases.setup]
-nixPkgs = ["php81", "php81Extensions.mysqli", "php81Extensions.mysqlnd"]
+nixPkgs = ["php81", "php81Extensions.mysqli", "php81Extensions.mysqlnd", "bash"]
 
+# Clear build commands to prevent "npm" errors
 [phases.build]
-cmds = ["echo 'Building PHP app with MySQLi support...'"]
+cmds = []
 
+# Start PHP built-in server
 [start]
 cmd = "php -S 0.0.0.0:$PORT"

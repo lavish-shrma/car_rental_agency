@@ -41,37 +41,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Verify credentials
     if (empty($errors)) {
-        $stmt = $conn->prepare('SELECT id, user_type, password, full_name FROM users WHERE email = ? AND user_type = ?');
-        $stmt->bind_param('ss', $email, $userType);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        try {
+            $stmt = $pdo->prepare('SELECT id, user_type, password, full_name FROM users WHERE email = ? AND user_type = ?');
+            $stmt->execute([$email, $userType]);
+            $user = $stmt->fetch();
 
-        if ($result->num_rows === 1) {
-            $user = $result->fetch_assoc();
+            if ($user) {
+                // Verify hashed password
+                if (password_verify($password, $user['password'])) {
+                    // Create session
+                    startSession();
+                    $_SESSION['user_id']   = $user['id'];
+                    $_SESSION['user_type'] = $user['user_type'];
+                    $_SESSION['full_name'] = $user['full_name'];
 
-            // Verify hashed password
-            if (password_verify($password, $user['password'])) {
-                // Create session
-                startSession();
-                $_SESSION['user_id']   = $user['id'];
-                $_SESSION['user_type'] = $user['user_type'];
-                $_SESSION['full_name'] = $user['full_name'];
-
-                // Redirect based on user type
-                if ($user['user_type'] === 'customer') {
-                    header('Location: /customer/available_cars.php');
-                    exit;
+                    // Redirect based on user type
+                    if ($user['user_type'] === 'customer') {
+                        header('Location: /customer/available_cars.php');
+                        exit;
+                    } else {
+                        header('Location: /agency/add_car.php');
+                        exit;
+                    }
                 } else {
-                    header('Location: /agency/add_car.php');
-                    exit;
+                    $errors[] = 'Invalid email or password.';
                 }
             } else {
-                $errors[] = 'Invalid email or password.';
+                $errors[] = 'Invalid email, password, or user type selection.';
             }
-        } else {
-            $errors[] = 'Invalid email, password, or user type selection.';
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 }
 

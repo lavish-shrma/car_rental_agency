@@ -58,44 +58,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Check vehicle number uniqueness
     if (empty($errors)) {
-        $stmt = $conn->prepare('SELECT id FROM cars WHERE vehicle_number = ?');
-        $stmt->bind_param('s', $vehicleNumber);
-        $stmt->execute();
-        $stmt->store_result();
-        if ($stmt->num_rows > 0) {
-            $errors[] = 'This vehicle number is already registered.';
+        try {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM cars WHERE vehicle_number = ?');
+            $stmt->execute([$vehicleNumber]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors[] = 'This vehicle number is already registered.';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 
     // Insert car
     if (empty($errors)) {
-        $stmt = $conn->prepare(
-            'INSERT INTO cars (agency_id, vehicle_model, vehicle_number, seating_capacity, rent_per_day) VALUES (?, ?, ?, ?, ?)'
-        );
-        $seatInt = (int)$seatingCapacity;
-        $rentDec = (float)$rentPerDay;
-        $stmt->bind_param('issid', $agencyId, $vehicleModel, $vehicleNumber, $seatInt, $rentDec);
-
-        if ($stmt->execute()) {
-            $successMessage = 'Car added successfully!';
-            // Clear form fields
-            $vehicleModel = '';
-            $vehicleNumber = '';
-            $seatingCapacity = '';
-            $rentPerDay = '';
-        } else {
-            $errors[] = 'Failed to add car. Please try again.';
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO cars (agency_id, vehicle_model, vehicle_number, seating_capacity, rent_per_day) VALUES (?, ?, ?, ?, ?)'
+            );
+            $seatInt = (int)$seatingCapacity;
+            $rentDec = (float)$rentPerDay;
+            
+            if ($stmt->execute([$agencyId, $vehicleModel, $vehicleNumber, $seatInt, $rentDec])) {
+                $successMessage = 'Car added successfully!';
+                // Clear form fields
+                $vehicleModel = '';
+                $vehicleNumber = '';
+                $seatingCapacity = '';
+                $rentPerDay = '';
+            } else {
+                $errors[] = 'Failed to add car. Please try again.';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 }
 
 // Fetch agency's existing cars
-$stmt = $conn->prepare('SELECT * FROM cars WHERE agency_id = ? ORDER BY created_at DESC');
-$stmt->bind_param('i', $agencyId);
-$stmt->execute();
-$carsResult = $stmt->get_result();
+try {
+    $stmt = $pdo->prepare('SELECT * FROM cars WHERE agency_id = ? ORDER BY created_at DESC');
+    $stmt->execute([$agencyId]);
+    $cars = $stmt->fetchAll();
+} catch (PDOException $e) {
+    die("Error fetching cars: " . $e->getMessage());
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -153,7 +159,7 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Agency's Existing Cars -->
     <div class="col-md-6">
         <h4>Your Cars</h4>
-        <?php if ($carsResult->num_rows === 0): ?>
+        <?php if (count($cars) === 0): ?>
             <p class="text-muted">You haven't added any cars yet.</p>
         <?php else: ?>
             <div class="table-responsive">
@@ -169,7 +175,7 @@ require_once __DIR__ . '/../includes/header.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($car = $carsResult->fetch_assoc()): ?>
+                        <?php foreach ($cars as $car): ?>
                             <tr>
                                 <td><?php echo escape($car['vehicle_model']); ?></td>
                                 <td><?php echo escape($car['vehicle_number']); ?></td>
@@ -187,7 +193,7 @@ require_once __DIR__ . '/../includes/header.php';
                                        class="btn btn-sm btn-warning">Edit</a>
                                 </td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
@@ -196,6 +202,5 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <?php
-$stmt->close();
 require_once __DIR__ . '/../includes/footer.php';
 ?>

@@ -23,12 +23,17 @@ if (isset($_GET['updated'])) {
 }
 
 // Fetch all available cars
-$query = 'SELECT cars.*, users.company_name
-          FROM cars
-          INNER JOIN users ON cars.agency_id = users.id
-          WHERE cars.is_available = 1
-          ORDER BY cars.created_at DESC';
-$result = $conn->query($query);
+try {
+    $query = 'SELECT cars.*, users.company_name
+              FROM cars
+              INNER JOIN users ON cars.agency_id = users.id
+              WHERE cars.is_available = 1
+              ORDER BY cars.created_at DESC';
+    $stmt = $pdo->query($query);
+    $cars = $stmt->fetchAll();
+} catch (PDOException $e) {
+    die("Error fetching cars: " . $e->getMessage());
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -43,11 +48,11 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="alert alert-info">You are logged in as an agency. Agencies cannot rent cars.</div>
 <?php endif; ?>
 
-<?php if ($result->num_rows === 0): ?>
+<?php if (count($cars) === 0): ?>
     <div class="alert alert-info">No cars are currently available.</div>
 <?php else: ?>
     <div class="row">
-        <?php while ($car = $result->fetch_assoc()): ?>
+        <?php foreach ($cars as $car): ?>
             <div class="col-md-4 col-sm-6 mb-4">
                 <div class="card car-card h-100">
                     <div class="card-body d-flex flex-column">
@@ -105,7 +110,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
             </div>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </div>
 <?php endif; ?>
 

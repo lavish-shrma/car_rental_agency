@@ -19,36 +19,39 @@ if (!isLoggedIn() || getUserType() !== 'agency') {
 $agencyId = getUserId();
 
 // Fetch bookings for this agency's cars
-$stmt = $conn->prepare(
-    'SELECT
-        bookings.id AS booking_id,
-        bookings.start_date,
-        bookings.number_of_days,
-        bookings.end_date,
-        bookings.total_cost,
-        bookings.booking_status,
-        bookings.created_at AS booking_date,
-        cars.vehicle_model,
-        cars.vehicle_number,
-        users.full_name AS customer_name,
-        users.email AS customer_email,
-        users.phone_number AS customer_phone
-    FROM bookings
-    INNER JOIN cars ON bookings.car_id = cars.id
-    INNER JOIN users ON bookings.customer_id = users.id
-    WHERE cars.agency_id = ?
-    ORDER BY bookings.created_at DESC'
-);
-$stmt->bind_param('i', $agencyId);
-$stmt->execute();
-$bookingsResult = $stmt->get_result();
+try {
+    $stmt = $pdo->prepare(
+        'SELECT
+            bookings.id AS booking_id,
+            bookings.start_date,
+            bookings.number_of_days,
+            bookings.end_date,
+            bookings.total_cost,
+            bookings.booking_status,
+            bookings.created_at AS booking_date,
+            cars.vehicle_model,
+            cars.vehicle_number,
+            users.full_name AS customer_name,
+            users.email AS customer_email,
+            users.phone_number AS customer_phone
+        FROM bookings
+        INNER JOIN cars ON bookings.car_id = cars.id
+        INNER JOIN users ON bookings.customer_id = users.id
+        WHERE cars.agency_id = ?
+        ORDER BY bookings.created_at DESC'
+    );
+    $stmt->execute([$agencyId]);
+    $bookings = $stmt->fetchAll();
+} catch (PDOException $e) {
+    die("Error fetching bookings: " . $e->getMessage());
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <h2 class="page-heading">Bookings for Your Cars</h2>
 
-<?php if ($bookingsResult->num_rows === 0): ?>
+<?php if (count($bookings) === 0): ?>
     <div class="alert alert-info">No bookings found for your cars yet.</div>
 <?php else: ?>
     <div class="table-responsive">
@@ -69,7 +72,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </tr>
             </thead>
             <tbody>
-                <?php while ($booking = $bookingsResult->fetch_assoc()): ?>
+                <?php foreach ($bookings as $booking): ?>
                     <tr>
                         <td><?php echo escape($booking['customer_name']); ?></td>
                         <td><?php echo escape($booking['customer_email']); ?></td>
@@ -92,13 +95,12 @@ require_once __DIR__ . '/../includes/header.php';
                         </td>
                         <td><?php echo formatDate($booking['booking_date']); ?></td>
                     </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>
 <?php endif; ?>
 
 <?php
-$stmt->close();
 require_once __DIR__ . '/../includes/footer.php';
 ?>

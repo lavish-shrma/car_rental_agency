@@ -64,21 +64,22 @@ if ($numberOfDays < 1 || $numberOfDays > 30) {
 // Verify car exists and is still available
 $rentPerDay = 0;
 if (empty($errors)) {
-    $stmt = $conn->prepare('SELECT id, rent_per_day, is_available FROM cars WHERE id = ?');
-    $stmt->bind_param('i', $carId);
-    $stmt->execute();
-    $carResult = $stmt->get_result();
+    try {
+        $stmt = $pdo->prepare('SELECT id, rent_per_day, is_available FROM cars WHERE id = ?');
+        $stmt->execute([$carId]);
+        $carData = $stmt->fetch();
 
-    if ($carResult->num_rows === 0) {
-        $errors[] = 'Car not found.';
-    } else {
-        $carData = $carResult->fetch_assoc();
-        if (!$carData['is_available']) {
-            $errors[] = 'This car is no longer available.';
+        if (!$carData) {
+            $errors[] = 'Car not found.';
+        } else {
+            if (!$carData['is_available']) {
+                $errors[] = 'This car is no longer available.';
+            }
+            $rentPerDay = (float)$carData['rent_per_day'];
         }
-        $rentPerDay = (float)$carData['rent_per_day'];
+    } catch (PDOException $e) {
+        $errors[] = 'Database error: ' . $e->getMessage();
     }
-    $stmt->close();
 }
 
 // If there are errors, show them
@@ -104,30 +105,34 @@ if (!empty($errors)) {
 $endDate   = date('Y-m-d', strtotime($startDate . ' + ' . $numberOfDays . ' days'));
 $totalCost = $rentPerDay * $numberOfDays;
 
-// Insert booking record
-$stmt = $conn->prepare(
-    'INSERT INTO bookings (car_id, customer_id, start_date, number_of_days, end_date, total_cost)
-     VALUES (?, ?, ?, ?, ?, ?)'
-);
-$stmt->bind_param('iisisd', $carId, $customerId, $startDate, $numberOfDays, $endDate, $totalCost);
+// Insert booking record and update car availability (Transaction)
+try {
+    $pdo->beginTransaction();
 
-if ($stmt->execute()) {
-    $stmt->close();
+    // 1. Insert booking
+    $stmt = $pdo->prepare(
+        'INSERT INTO bookings (car_id, customer_id, start_date, number_of_days, end_date, total_cost)
+         VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([$carId, $customerId, $startDate, $numberOfDays, $endDate, $totalCost]);
 
-    // Update car availability to false
-    $stmt = $conn->prepare('UPDATE cars SET is_available = 0 WHERE id = ?');
-    $stmt->bind_param('i', $carId);
-    $stmt->execute();
-    $stmt->close();
+    // 2. Update car availability
+    $stmt = $pdo->prepare('UPDATE cars SET is_available = 0 WHERE id = ?');
+    $stmt->execute([$carId]);
+
+    $pdo->commit();
 
     // Redirect with success indicator
     header('Location: /customer/available_cars.php?rented=1');
     exit;
-} else {
-    $stmt->close();
+
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     $pageTitle = 'Booking Error';
     require_once __DIR__ . '/../includes/header.php';
-    echo '<div class="alert alert-danger">Failed to create booking. Please try again.</div>';
+    echo '<div class="alert alert-danger">Failed to create booking: ' . escape($e->getMessage()) . '</div>';
     echo '<a href="/customer/available_cars.php" class="btn btn-primary">Back to Available Cars</a>';
     require_once __DIR__ . '/../includes/footer.php';
     exit;

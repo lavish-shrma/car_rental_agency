@@ -56,35 +56,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Check duplicate email
     if (empty($errors)) {
-        $stmt = $conn->prepare('SELECT id FROM users WHERE email = ?');
-        $stmt->bind_param('s', $email);
-        $stmt->execute();
-        $stmt->store_result();
-        if ($stmt->num_rows > 0) {
-            $errors[] = 'An account with this email already exists.';
+        try {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE email = ?');
+            $stmt->execute([$email]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors[] = 'An account with this email already exists.';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 
     // Insert into database
     if (empty($errors)) {
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $userType = 'customer';
+        try {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $userType = 'customer';
 
-        $stmt = $conn->prepare(
-            'INSERT INTO users (user_type, email, password, full_name, phone_number) VALUES (?, ?, ?, ?, ?)'
-        );
-        $stmt->bind_param('sssss', $userType, $email, $hashedPassword, $fullName, $phoneNumber);
-
-        if ($stmt->execute()) {
-            $stmt->close();
-            // Redirect to login with success indicator
-            header('Location: /auth/login.php?registered=1');
-            exit;
-        } else {
-            $errors[] = 'Registration failed. Please try again.';
+            $stmt = $pdo->prepare(
+                'INSERT INTO users (user_type, email, password, full_name, phone_number) VALUES (?, ?, ?, ?, ?)'
+            );
+            
+            if ($stmt->execute([$userType, $email, $hashedPassword, $fullName, $phoneNumber])) {
+                // Redirect to login with success indicator
+                header('Location: /auth/login.php?registered=1');
+                exit;
+            } else {
+                $errors[] = 'Registration failed. Please try again.';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 }
 

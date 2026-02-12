@@ -29,20 +29,19 @@ if ($carId <= 0) {
 }
 
 // Fetch car details and verify ownership
-$stmt = $conn->prepare('SELECT * FROM cars WHERE id = ? AND agency_id = ?');
-$stmt->bind_param('ii', $carId, $agencyId);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    $stmt = $pdo->prepare('SELECT * FROM cars WHERE id = ? AND agency_id = ?');
+    $stmt->execute([$carId, $agencyId]);
+    $car = $stmt->fetch();
 
-if ($result->num_rows === 0) {
-    $stmt->close();
-    // Car not found or doesn't belong to this agency
-    header('Location: /agency/add_car.php');
-    exit;
+    if (!$car) {
+        // Car not found or doesn't belong to this agency
+        header('Location: /agency/add_car.php');
+        exit;
+    }
+} catch (PDOException $e) {
+    die("Database error: " . $e->getMessage());
 }
-
-$car = $result->fetch_assoc();
-$stmt->close();
 
 // Pre-populate form fields
 $vehicleModel    = $car['vehicle_model'];
@@ -77,33 +76,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Check vehicle number uniqueness (exclude current car)
     if (empty($errors)) {
-        $stmt = $conn->prepare('SELECT id FROM cars WHERE vehicle_number = ? AND id != ?');
-        $stmt->bind_param('si', $vehicleNumber, $carId);
-        $stmt->execute();
-        $stmt->store_result();
-        if ($stmt->num_rows > 0) {
-            $errors[] = 'This vehicle number is already registered to another car.';
+        try {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM cars WHERE vehicle_number = ? AND id != ?');
+            $stmt->execute([$vehicleNumber, $carId]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors[] = 'This vehicle number is already registered to another car.';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 
     // Update car
     if (empty($errors)) {
-        $stmt = $conn->prepare(
-            'UPDATE cars SET vehicle_model = ?, vehicle_number = ?, seating_capacity = ?, rent_per_day = ? WHERE id = ? AND agency_id = ?'
-        );
-        $seatInt = (int)$seatingCapacity;
-        $rentDec = (float)$rentPerDay;
-        $stmt->bind_param('ssidii', $vehicleModel, $vehicleNumber, $seatInt, $rentDec, $carId, $agencyId);
-
-        if ($stmt->execute()) {
-            $stmt->close();
-            header('Location: /agency/add_car.php?updated=1');
-            exit;
-        } else {
-            $errors[] = 'Failed to update car. Please try again.';
+        try {
+            $stmt = $pdo->prepare(
+                'UPDATE cars SET vehicle_model = ?, vehicle_number = ?, seating_capacity = ?, rent_per_day = ? WHERE id = ? AND agency_id = ?'
+            );
+            $seatInt = (int)$seatingCapacity;
+            $rentDec = (float)$rentPerDay;
+            
+            if ($stmt->execute([$vehicleModel, $vehicleNumber, $seatInt, $rentDec, $carId, $agencyId])) {
+                header('Location: /agency/add_car.php?updated=1');
+                exit;
+            } else {
+                $errors[] = 'Failed to update car. Please try again.';
+            }
+        } catch (PDOException $e) {
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
-        $stmt->close();
     }
 }
 
